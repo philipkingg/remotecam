@@ -29,7 +29,7 @@ app.post('/convert', (req, res) => {
 
   const tmp = path.join(os.tmpdir(), `remotecam-${Date.now()}`);
   const inFile = `${tmp}.webm`;
-  const outFile = `${tmp}.mp4`;
+  const outFile = `${tmp}.mov`;
   const ws = fs.createWriteStream(inFile);
 
   req.pipe(ws).on('finish', () => {
@@ -45,8 +45,8 @@ app.post('/convert', (req, res) => {
         if (fs.existsSync(outFile)) fs.unlinkSync(outFile);
         return res.status(500).json({ error: err.message });
       }
-      res.setHeader('Content-Type', 'video/mp4');
-      res.setHeader('Content-Disposition', 'attachment; filename="converted.mp4"');
+      res.setHeader('Content-Type', 'video/quicktime');
+      res.setHeader('Content-Disposition', 'attachment; filename="converted.mov"');
       const rs = fs.createReadStream(outFile);
       rs.pipe(res).on('finish', () => fs.unlinkSync(outFile));
     });

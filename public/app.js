@@ -270,7 +270,7 @@ function stopRecording() {
 
 function saveRecording() {
   const ismp4 = recordingMimeType.startsWith('video/mp4');
-  const ext = ismp4 ? 'mp4' : 'webm';
+  const ext = ismp4 ? 'mov' : 'webm';
   const blob = new Blob(chunks, { type: recordingMimeType });
   const url = URL.createObjectURL(blob);
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -291,12 +291,12 @@ function renderRecordings() {
     item.innerHTML = `
       <div>
         <div class="name">${rec.filename}</div>
-        <div class="meta">${formatTime(rec.duration)} · ${rec.ismp4 ? 'MP4' : 'WebM'}</div>
+        <div class="meta">${formatTime(rec.duration)} · ${rec.ismp4 ? 'MOV' : 'WebM'}</div>
       </div>
       <div class="actions">
         <button data-action="preview" data-i="${i}">Preview</button>
         <button data-action="download" data-i="${i}">Download</button>
-        ${!rec.ismp4 ? `<button data-action="convert" data-i="${i}" class="convert">→ MP4</button>` : ''}
+        ${!rec.ismp4 ? `<button data-action="convert" data-i="${i}" class="convert">→ MOV</button>` : ''}
         <button data-action="delete" data-i="${i}" class="delete">Delete</button>
       </div>`;
     recordingsList.appendChild(item);
@@ -465,14 +465,14 @@ recordingsList.addEventListener('click', async e => {
         btn.disabled = false;
         return;
       }
-      const mp4Blob = await res.blob();
-      const mp4Url = URL.createObjectURL(mp4Blob);
-      const mp4Name = rec.filename.replace('.webm', '.mp4');
+      const movBlob = await res.blob();
+      const movUrl = URL.createObjectURL(movBlob);
+      const movName = rec.filename.replace('.webm', '.mov');
       const a = document.createElement('a');
-      a.href = mp4Url;
-      a.download = mp4Name;
+      a.href = movUrl;
+      a.download = movName;
       a.click();
-      URL.revokeObjectURL(mp4Url);
+      URL.revokeObjectURL(movUrl);
       btn.textContent = '✓ Done';
     } catch {
       btn.textContent = '→ MP4';
