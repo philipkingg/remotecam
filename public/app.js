@@ -95,6 +95,7 @@ async function startStream(deviceId) {
     videoEl.classList.add('active');
     emptyState.style.display = 'none';
     camControls.classList.remove('hidden');
+    videoEl.style.transform = '';
     setPreviewOrientation();
     setStatus('live');
     recordBtn.disabled = false;
@@ -121,31 +122,45 @@ function setPreviewOrientation() {
 
 // ── Zoom ───────────────────────────────────────────────────────────────────
 
+let hardwareZoom = false;
+
 function updateZoomCapabilities() {
   if (!stream) return;
   const track = stream.getVideoTracks()[0];
   if (!track) return;
   const caps = track.getCapabilities?.() ?? {};
 
+  // Always show zoom — use hardware zoom if supported, CSS scale otherwise
+  zoomWrap.style.display = '';
+  zoomRange.value = 1;
+  zoomVal.textContent = '1.0×';
+
   if (caps.zoom) {
+    hardwareZoom = true;
     zoomRange.min = caps.zoom.min;
     zoomRange.max = caps.zoom.max;
     zoomRange.step = caps.zoom.step ?? 0.1;
     zoomRange.value = caps.zoom.min;
     zoomVal.textContent = `${Number(caps.zoom.min).toFixed(1)}×`;
-    zoomWrap.style.display = '';
   } else {
-    zoomWrap.style.display = 'none';
+    hardwareZoom = false;
+    zoomRange.min = 1;
+    zoomRange.max = 5;
+    zoomRange.step = 0.1;
   }
 }
 
 async function applyZoom(value) {
-  if (!stream) return;
-  const track = stream.getVideoTracks()[0];
-  if (!track) return;
-  try {
-    await track.applyConstraints({ advanced: [{ zoom: Number(value) }] });
-  } catch {}
+  const v = Number(value);
+  if (hardwareZoom && stream) {
+    const track = stream.getVideoTracks()[0];
+    if (track) {
+      try { await track.applyConstraints({ advanced: [{ zoom: v }] }); } catch {}
+    }
+  } else {
+    // Digital zoom via CSS scale — preview-wrap clips the overflow
+    videoEl.style.transform = v === 1 ? '' : `scale(${v})`;
+  }
 }
 
 // ── Status ─────────────────────────────────────────────────────────────────
