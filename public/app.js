@@ -21,6 +21,7 @@ const modalTitle = document.getElementById('modalTitle');
 const modalVideo = document.getElementById('modalVideo');
 const modalClose = document.getElementById('modalClose');
 const presetBtns = document.querySelectorAll('.preset-btn');
+const ratioBtns = document.querySelectorAll('[data-ratio]');
 const orientLandscape = document.getElementById('orientLandscape');
 const orientPortrait = document.getElementById('orientPortrait');
 const monitorBtn = document.getElementById('monitorBtn');
@@ -381,6 +382,13 @@ async function exitMonitorMode() {
 cameraSelect.addEventListener('change', () => startStream(cameraSelect.value));
 
 presetBtns.forEach(btn => btn.addEventListener('click', () => applyPreset(btn.dataset.preset)));
+
+ratioBtns.forEach(btn => btn.addEventListener('click', () => {
+  ratioBtns.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const previewWrap = document.querySelector('.preview-wrap');
+  previewWrap.style.aspectRatio = btn.dataset.ratio === 'auto' ? '' : btn.dataset.ratio;
+}));
 
 resolutionSelect.addEventListener('change', () => {
   presetBtns.forEach(b => b.classList.remove('active'));
