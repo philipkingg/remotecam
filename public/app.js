@@ -3,11 +3,17 @@ const emptyState = document.getElementById('emptyState');
 const cameraSelect = document.getElementById('cameraSelect');
 const recordBtn = document.getElementById('recordBtn');
 const statusPill = document.getElementById('statusPill');
-const statusDot = statusPill.querySelector('.dot');
 const statusText = statusPill.querySelector('.status-text');
 const timer = document.getElementById('timer');
 const recordingsSection = document.getElementById('recordings');
 const recordingsList = document.getElementById('recordingsList');
+const camControls = document.getElementById('camControls');
+const resolutionSelect = document.getElementById('resolutionSelect');
+const fpsSelect = document.getElementById('fpsSelect');
+const zoomWrap = document.getElementById('zoomWrap');
+const zoomRange = document.getElementById('zoomRange');
+const zoomVal = document.getElementById('zoomVal');
+const audioToggle = document.getElementById('audioToggle');
 
 let stream = null;
 let recorder = null;
@@ -15,9 +21,11 @@ let chunks = [];
 let timerInterval = null;
 let elapsedSeconds = 0;
 let recordings = [];
+let audioEnabled = false;
+
+// ── Device list ────────────────────────────────────────────────────────────
 
 async function loadDevices() {
-  // Request permission first so device labels are populated
   try {
     const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
     tmp.getTracks().forEach(t => t.stop());
@@ -34,7 +42,6 @@ async function loadDevices() {
     cameraSelect.appendChild(opt);
   });
 
-  // Auto-select iPhone/Continuity Camera if present
   const iphone = videoInputs.find(d => /iphone|continuity/i.test(d.label));
   if (iphone) {
     cameraSelect.value = iphone.deviceId;
@@ -42,14 +49,26 @@ async function loadDevices() {
   }
 }
 
+// ── Stream ─────────────────────────────────────────────────────────────────
+
+function buildVideoConstraints(deviceId) {
+  const [width, height] = resolutionSelect.value.split('x').map(Number);
+  const frameRate = Number(fpsSelect.value);
+  return {
+    deviceId: { exact: deviceId },
+    width: { ideal: width },
+    height: { ideal: height },
+    frameRate: { ideal: frameRate },
+  };
+}
+
 async function startStream(deviceId) {
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
-  }
+  if (stream) stream.getTracks().forEach(t => t.stop());
 
   if (!deviceId) {
     videoEl.classList.remove('active');
     emptyState.style.display = 'flex';
+    camControls.classList.add('hidden');
     setStatus('idle');
     recordBtn.disabled = true;
     return;
@@ -57,20 +76,59 @@ async function startStream(deviceId) {
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-      audio: false,
+      video: buildVideoConstraints(deviceId),
+      audio: audioEnabled,
     });
     videoEl.srcObject = stream;
     videoEl.classList.add('active');
     emptyState.style.display = 'none';
+    camControls.classList.remove('hidden');
     setStatus('live');
     recordBtn.disabled = false;
+    updateZoomCapabilities();
   } catch (err) {
     console.error('Camera error:', err);
     setStatus('idle');
     recordBtn.disabled = true;
+    camControls.classList.add('hidden');
   }
 }
+
+async function restartStream() {
+  const deviceId = cameraSelect.value;
+  if (deviceId) await startStream(deviceId);
+}
+
+// ── Zoom ───────────────────────────────────────────────────────────────────
+
+function updateZoomCapabilities() {
+  if (!stream) return;
+  const track = stream.getVideoTracks()[0];
+  if (!track) return;
+  const caps = track.getCapabilities?.() ?? {};
+
+  if (caps.zoom) {
+    zoomRange.min = caps.zoom.min;
+    zoomRange.max = caps.zoom.max;
+    zoomRange.step = caps.zoom.step ?? 0.1;
+    zoomRange.value = caps.zoom.min;
+    zoomVal.textContent = `${Number(caps.zoom.min).toFixed(1)}×`;
+    zoomWrap.style.display = '';
+  } else {
+    zoomWrap.style.display = 'none';
+  }
+}
+
+async function applyZoom(value) {
+  if (!stream) return;
+  const track = stream.getVideoTracks()[0];
+  if (!track) return;
+  try {
+    await track.applyConstraints({ advanced: [{ zoom: Number(value) }] });
+  } catch {}
+}
+
+// ── Status ─────────────────────────────────────────────────────────────────
 
 function setStatus(state) {
   statusPill.className = 'status-pill';
@@ -85,6 +143,8 @@ function setStatus(state) {
   }
 }
 
+// ── Timer ──────────────────────────────────────────────────────────────────
+
 function formatTime(s) {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
@@ -93,11 +153,15 @@ function formatTime(s) {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
+// ── Recording ──────────────────────────────────────────────────────────────
+
 function startRecording() {
   if (!stream) return;
 
   chunks = [];
-  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+    ? 'video/webm;codecs=vp9,opus'
+    : MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
     ? 'video/webm;codecs=vp9'
     : 'video/webm';
 
@@ -118,6 +182,9 @@ function startRecording() {
   recordBtn.textContent = 'Stop';
   recordBtn.classList.add('recording');
   cameraSelect.disabled = true;
+  resolutionSelect.disabled = true;
+  fpsSelect.disabled = true;
+  audioToggle.disabled = true;
 }
 
 function stopRecording() {
@@ -128,6 +195,9 @@ function stopRecording() {
   recordBtn.textContent = 'Record';
   recordBtn.classList.remove('recording');
   cameraSelect.disabled = false;
+  resolutionSelect.disabled = false;
+  fpsSelect.disabled = false;
+  audioToggle.disabled = false;
 }
 
 function saveRecording() {
@@ -140,7 +210,6 @@ function saveRecording() {
   recordings.unshift({ url, filename, duration, blob });
   renderRecordings();
 
-  // Auto-download
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
@@ -148,13 +217,9 @@ function saveRecording() {
 }
 
 function renderRecordings() {
-  if (recordings.length === 0) {
-    recordingsSection.classList.add('hidden');
-    return;
-  }
+  if (recordings.length === 0) { recordingsSection.classList.add('hidden'); return; }
   recordingsSection.classList.remove('hidden');
   recordingsList.innerHTML = '';
-
   recordings.forEach((rec, i) => {
     const item = document.createElement('div');
     item.className = 'recording-item';
@@ -165,21 +230,38 @@ function renderRecordings() {
       </div>
       <div class="actions">
         <button data-action="download" data-i="${i}">Download</button>
-      </div>
-    `;
+      </div>`;
     recordingsList.appendChild(item);
   });
 }
 
-// Events
+// ── Event listeners ────────────────────────────────────────────────────────
+
 cameraSelect.addEventListener('change', () => startStream(cameraSelect.value));
 
+resolutionSelect.addEventListener('change', restartStream);
+fpsSelect.addEventListener('change', restartStream);
+
+zoomRange.addEventListener('input', () => {
+  const v = Number(zoomRange.value);
+  zoomVal.textContent = `${v.toFixed(1)}×`;
+  applyZoom(v);
+});
+
+audioToggle.addEventListener('click', async () => {
+  audioEnabled = !audioEnabled;
+  audioToggle.textContent = audioEnabled ? 'On' : 'Off';
+  audioToggle.setAttribute('aria-pressed', audioEnabled);
+  audioToggle.classList.toggle('on', audioEnabled);
+  // Restart stream to acquire/release microphone
+  await restartStream();
+  // Mute the preview speaker to avoid feedback; audio still captured in recorder
+  videoEl.muted = true;
+});
+
 recordBtn.addEventListener('click', () => {
-  if (recorder && recorder.state === 'recording') {
-    stopRecording();
-  } else {
-    startRecording();
-  }
+  if (recorder && recorder.state === 'recording') stopRecording();
+  else startRecording();
 });
 
 recordingsList.addEventListener('click', e => {

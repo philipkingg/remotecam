@@ -36,6 +36,40 @@
     <button id="recordBtn" disabled>Record</button>
   </div>
 
+  <div class="cam-controls hidden" id="camControls">
+    <div class="cam-control" id="resolutionWrap">
+      <label for="resolutionSelect">Resolution</label>
+      <div class="select-wrap">
+        <select id="resolutionSelect">
+          <option value="3840x2160">4K (2160p)</option>
+          <option value="1920x1080" selected>1080p</option>
+          <option value="1280x720">720p</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="cam-control" id="fpsWrap">
+      <label for="fpsSelect">Frame rate</label>
+      <div class="select-wrap">
+        <select id="fpsSelect">
+          <option value="60">60 fps</option>
+          <option value="30" selected>30 fps</option>
+          <option value="24">24 fps</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="cam-control" id="zoomWrap" style="display:none">
+      <label for="zoomRange">Zoom <span id="zoomVal">1×</span></label>
+      <input type="range" id="zoomRange" min="1" max="5" step="0.1" value="1" />
+    </div>
+
+    <div class="cam-control">
+      <label>Audio</label>
+      <button class="toggle-btn" id="audioToggle" aria-pressed="false">Off</button>
+    </div>
+  </div>
+
   <div class="recordings hidden" id="recordings">
     <h2>Recordings</h2>
     <div class="recordings-list" id="recordingsList"></div>
