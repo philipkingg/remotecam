@@ -275,6 +275,7 @@ button {
 }
 
 /* Wide controls that benefit from more horizontal space */
+#presetWrap,
 #zoomWrap,
 #micWrap {
   grid-column: span 2;
