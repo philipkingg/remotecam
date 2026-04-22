@@ -230,9 +230,16 @@ function renderRecordings() {
       </div>
       <div class="actions">
         <button data-action="download" data-i="${i}">Download</button>
+        <button data-action="delete" data-i="${i}" class="delete">Delete</button>
       </div>`;
     recordingsList.appendChild(item);
   });
+}
+
+function deleteRecording(i) {
+  URL.revokeObjectURL(recordings[i].url);
+  recordings.splice(i, 1);
+  renderRecordings();
 }
 
 // ── Event listeners ────────────────────────────────────────────────────────
@@ -267,13 +274,21 @@ recordBtn.addEventListener('click', () => {
 recordingsList.addEventListener('click', e => {
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
-  const rec = recordings[parseInt(btn.dataset.i)];
+  const i = parseInt(btn.dataset.i);
   if (btn.dataset.action === 'download') {
     const a = document.createElement('a');
-    a.href = rec.url;
-    a.download = rec.filename;
+    a.href = recordings[i].url;
+    a.download = recordings[i].filename;
     a.click();
+  } else if (btn.dataset.action === 'delete') {
+    deleteRecording(i);
   }
+});
+
+document.getElementById('clearAllBtn').addEventListener('click', () => {
+  recordings.forEach(r => URL.revokeObjectURL(r.url));
+  recordings = [];
+  renderRecordings();
 });
 
 navigator.mediaDevices.addEventListener('devicechange', loadDevices);

@@ -340,13 +340,34 @@ input[type="range"]::-webkit-slider-thumb:hover {
   margin-top: 24px;
 }
 
+.recordings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
 .recordings h2 {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 10px;
+}
+
+.clear-btn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 6px;
+}
+
+.clear-btn:hover {
+  border-color: var(--red-dark);
+  color: #fc8181;
 }
 
 .recordings-list {
@@ -395,6 +416,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .recording-item button:hover {
   border-color: #444;
   background: #1c1c1c;
+}
+
+.recording-item button.delete:hover {
+  border-color: var(--red-dark);
+  color: #fc8181;
+  background: transparent;
 }
 
 .recordings.hidden {
