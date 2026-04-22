@@ -424,6 +424,20 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: transparent;
 }
 
+.recording-item button.convert {
+  color: #90cdf4;
+  border-color: #2b6cb0;
+}
+
+.recording-item button.convert:hover:not(:disabled) {
+  background: #1a365d;
+}
+
+.recording-item button.convert:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .recordings.hidden {
   display: none;
 }

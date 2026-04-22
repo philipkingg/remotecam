@@ -18,6 +18,7 @@ const audioToggle = document.getElementById('audioToggle');
 let stream = null;
 let recorder = null;
 let chunks = [];
+let recordingMimeType = '';
 let timerInterval = null;
 let elapsedSeconds = 0;
 let recordings = [];
@@ -159,12 +160,15 @@ function startRecording() {
   if (!stream) return;
 
   chunks = [];
-  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
-    ? 'video/webm;codecs=vp9,opus'
-    : MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-    ? 'video/webm;codecs=vp9'
-    : 'video/webm';
+  const mimeType = [
+    audioEnabled ? 'video/mp4;codecs=avc1,mp4a.40.2' : 'video/mp4;codecs=avc1',
+    'video/mp4',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp9',
+    'video/webm',
+  ].find(t => MediaRecorder.isTypeSupported(t)) ?? '';
 
+  recordingMimeType = mimeType;
   recorder = new MediaRecorder(stream, { mimeType });
   recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
   recorder.onstop = saveRecording;
@@ -201,13 +205,15 @@ function stopRecording() {
 }
 
 function saveRecording() {
-  const blob = new Blob(chunks, { type: 'video/webm' });
+  const ismp4 = recordingMimeType.startsWith('video/mp4');
+  const ext = ismp4 ? 'mp4' : 'webm';
+  const blob = new Blob(chunks, { type: recordingMimeType });
   const url = URL.createObjectURL(blob);
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const filename = `remotecam-${timestamp}.webm`;
+  const filename = `remotecam-${timestamp}.${ext}`;
   const duration = elapsedSeconds;
 
-  recordings.unshift({ url, filename, duration, blob });
+  recordings.unshift({ url, filename, duration, blob, ismp4 });
   renderRecordings();
 
   const a = document.createElement('a');
@@ -226,10 +232,11 @@ function renderRecordings() {
     item.innerHTML = `
       <div>
         <div class="name">${rec.filename}</div>
-        <div class="meta">${formatTime(rec.duration)}</div>
+        <div class="meta">${formatTime(rec.duration)} · ${rec.ismp4 ? 'MP4' : 'WebM'}</div>
       </div>
       <div class="actions">
         <button data-action="download" data-i="${i}">Download</button>
+        ${!rec.ismp4 ? `<button data-action="convert" data-i="${i}" class="convert">→ MP4</button>` : ''}
         <button data-action="delete" data-i="${i}" class="delete">Delete</button>
       </div>`;
     recordingsList.appendChild(item);
@@ -271,15 +278,42 @@ recordBtn.addEventListener('click', () => {
   else startRecording();
 });
 
-recordingsList.addEventListener('click', e => {
+recordingsList.addEventListener('click', async e => {
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
   const i = parseInt(btn.dataset.i);
+  const rec = recordings[i];
+
   if (btn.dataset.action === 'download') {
     const a = document.createElement('a');
-    a.href = recordings[i].url;
-    a.download = recordings[i].filename;
+    a.href = rec.url;
+    a.download = rec.filename;
     a.click();
+  } else if (btn.dataset.action === 'convert') {
+    btn.textContent = 'Converting…';
+    btn.disabled = true;
+    try {
+      const res = await fetch('/convert', { method: 'POST', body: rec.blob, headers: { 'Content-Type': 'video/webm' } });
+      if (!res.ok) {
+        const { error } = await res.json();
+        alert(`Conversion failed: ${error}`);
+        btn.textContent = '→ MP4';
+        btn.disabled = false;
+        return;
+      }
+      const mp4Blob = await res.blob();
+      const mp4Url = URL.createObjectURL(mp4Blob);
+      const mp4Name = rec.filename.replace('.webm', '.mp4');
+      const a = document.createElement('a');
+      a.href = mp4Url;
+      a.download = mp4Name;
+      a.click();
+      URL.revokeObjectURL(mp4Url);
+      btn.textContent = '✓ Done';
+    } catch {
+      btn.textContent = '→ MP4';
+      btn.disabled = false;
+    }
   } else if (btn.dataset.action === 'delete') {
     deleteRecording(i);
   }
