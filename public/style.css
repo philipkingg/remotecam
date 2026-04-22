@@ -263,6 +263,10 @@ button {
   display: none;
 }
 
+.cam-control.hidden {
+  display: none;
+}
+
 .cam-control {
   display: flex;
   flex-direction: column;
@@ -614,4 +618,77 @@ body.monitor .preview-wrap {
 .monitor-bar button:hover {
   background: rgba(255, 255, 255, 0.16);
   border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Preview modal ─────────────────────────────────────────────────────────── */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+
+.modal-backdrop.hidden {
+  display: none;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.modal-title {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-close {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  color: var(--text);
+  background: var(--border);
+}
+
+.modal-video {
+  width: 100%;
+  max-height: 75vh;
+  background: #000;
+  display: block;
 }

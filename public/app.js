@@ -14,6 +14,12 @@ const zoomWrap = document.getElementById('zoomWrap');
 const zoomRange = document.getElementById('zoomRange');
 const zoomVal = document.getElementById('zoomVal');
 const audioToggle = document.getElementById('audioToggle');
+const micWrap = document.getElementById('micWrap');
+const micSelect = document.getElementById('micSelect');
+const modalBackdrop = document.getElementById('modalBackdrop');
+const modalTitle = document.getElementById('modalTitle');
+const modalVideo = document.getElementById('modalVideo');
+const modalClose = document.getElementById('modalClose');
 const orientLandscape = document.getElementById('orientLandscape');
 const orientPortrait = document.getElementById('orientPortrait');
 const monitorBtn = document.getElementById('monitorBtn');
@@ -29,6 +35,7 @@ let timerInterval = null;
 let elapsedSeconds = 0;
 let recordings = [];
 let audioEnabled = false;
+let micDeviceId = '';
 let orientation = 'landscape'; // 'landscape' | 'portrait'
 let monitorMode = false;
 let overlayHideTimer = null;
@@ -43,6 +50,7 @@ async function loadDevices() {
 
   const devices = await navigator.mediaDevices.enumerateDevices();
   const videoInputs = devices.filter(d => d.kind === 'videoinput');
+  const audioInputs = devices.filter(d => d.kind === 'audioinput');
 
   cameraSelect.innerHTML = '<option value="">Select camera...</option>';
   videoInputs.forEach(d => {
@@ -52,11 +60,26 @@ async function loadDevices() {
     cameraSelect.appendChild(opt);
   });
 
+  populateMicList(audioInputs);
+
   const iphone = videoInputs.find(d => /iphone|continuity/i.test(d.label));
   if (iphone) {
     cameraSelect.value = iphone.deviceId;
     await startStream(iphone.deviceId);
   }
+}
+
+function populateMicList(audioInputs) {
+  const prev = micSelect.value;
+  micSelect.innerHTML = '<option value="">Default mic</option>';
+  audioInputs.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.deviceId;
+    opt.textContent = d.label || `Microphone ${micSelect.options.length}`;
+    micSelect.appendChild(opt);
+  });
+  if (prev) micSelect.value = prev;
+  micDeviceId = micSelect.value;
 }
 
 // ── Stream ─────────────────────────────────────────────────────────────────
@@ -89,7 +112,9 @@ async function startStream(deviceId) {
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: buildVideoConstraints(deviceId),
-      audio: audioEnabled,
+      audio: audioEnabled
+        ? { deviceId: micDeviceId ? { exact: micDeviceId } : undefined }
+        : false,
     });
     videoEl.srcObject = stream;
     videoEl.classList.add('active');
@@ -252,11 +277,6 @@ function saveRecording() {
 
   recordings.unshift({ url, filename, duration, blob, ismp4 });
   renderRecordings();
-
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
 }
 
 function renderRecordings() {
@@ -272,6 +292,7 @@ function renderRecordings() {
         <div class="meta">${formatTime(rec.duration)} · ${rec.ismp4 ? 'MP4' : 'WebM'}</div>
       </div>
       <div class="actions">
+        <button data-action="preview" data-i="${i}">Preview</button>
         <button data-action="download" data-i="${i}">Download</button>
         ${!rec.ismp4 ? `<button data-action="convert" data-i="${i}" class="convert">→ MP4</button>` : ''}
         <button data-action="delete" data-i="${i}" class="delete">Delete</button>
@@ -284,6 +305,21 @@ function deleteRecording(i) {
   URL.revokeObjectURL(recordings[i].url);
   recordings.splice(i, 1);
   renderRecordings();
+}
+
+// ── Preview modal ──────────────────────────────────────────────────────────
+
+function openPreview(rec) {
+  modalVideo.src = rec.url;
+  modalTitle.textContent = rec.filename;
+  modalBackdrop.classList.remove('hidden');
+  modalVideo.play();
+}
+
+function closePreview() {
+  modalBackdrop.classList.add('hidden');
+  modalVideo.pause();
+  modalVideo.src = '';
 }
 
 // ── Monitor mode ───────────────────────────────────────────────────────────
@@ -350,10 +386,19 @@ audioToggle.addEventListener('click', async () => {
   audioToggle.textContent = audioEnabled ? 'On' : 'Off';
   audioToggle.setAttribute('aria-pressed', audioEnabled);
   audioToggle.classList.toggle('on', audioEnabled);
-  // Restart stream to acquire/release microphone
+  micWrap.classList.toggle('hidden', !audioEnabled);
   await restartStream();
-  // Mute the preview speaker to avoid feedback; audio still captured in recorder
   videoEl.muted = true;
+  if (audioEnabled) {
+    // Re-enumerate now that mic permission is granted — labels will be populated
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    populateMicList(devices.filter(d => d.kind === 'audioinput'));
+  }
+});
+
+micSelect.addEventListener('change', async () => {
+  micDeviceId = micSelect.value;
+  if (audioEnabled) await restartStream();
 });
 
 recordBtn.addEventListener('click', () => {
@@ -367,7 +412,9 @@ recordingsList.addEventListener('click', async e => {
   const i = parseInt(btn.dataset.i);
   const rec = recordings[i];
 
-  if (btn.dataset.action === 'download') {
+  if (btn.dataset.action === 'preview') {
+    openPreview(rec);
+  } else if (btn.dataset.action === 'download') {
     const a = document.createElement('a');
     a.href = rec.url;
     a.download = rec.filename;
@@ -430,8 +477,14 @@ document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement) fullscreenBtn.textContent = 'Fullscreen';
 });
 
+modalClose.addEventListener('click', closePreview);
+modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closePreview(); });
+
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && monitorMode) exitMonitorMode();
+  if (e.key === 'Escape') {
+    if (!modalBackdrop.classList.contains('hidden')) closePreview();
+    else if (monitorMode) exitMonitorMode();
+  }
 });
 
 navigator.mediaDevices.addEventListener('devicechange', loadDevices);

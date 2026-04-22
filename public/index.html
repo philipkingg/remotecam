@@ -87,6 +87,13 @@
       <label>Audio</label>
       <button class="toggle-btn" id="audioToggle" aria-pressed="false">Off</button>
     </div>
+
+    <div class="cam-control hidden" id="micWrap">
+      <label for="micSelect">Microphone</label>
+      <div class="select-wrap">
+        <select id="micSelect"></select>
+      </div>
+    </div>
   </div>
 
   <div class="recordings hidden" id="recordings">
@@ -95,6 +102,16 @@
       <button class="clear-btn" id="clearAllBtn">Clear all</button>
     </div>
     <div class="recordings-list" id="recordingsList"></div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="modalBackdrop">
+    <div class="modal" id="previewModal">
+      <div class="modal-header">
+        <span class="modal-title" id="modalTitle"></span>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <video class="modal-video" id="modalVideo" controls></video>
+    </div>
   </div>
 
   <script src="app.js"></script>
