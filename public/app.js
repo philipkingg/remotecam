@@ -20,6 +20,7 @@ const modalBackdrop = document.getElementById('modalBackdrop');
 const modalTitle = document.getElementById('modalTitle');
 const modalVideo = document.getElementById('modalVideo');
 const modalClose = document.getElementById('modalClose');
+const presetBtns = document.querySelectorAll('.preset-btn');
 const orientLandscape = document.getElementById('orientLandscape');
 const orientPortrait = document.getElementById('orientPortrait');
 const monitorBtn = document.getElementById('monitorBtn');
@@ -234,7 +235,7 @@ function startRecording() {
   recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond });
   recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
   recorder.onstop = saveRecording;
-  recorder.start(1000);
+  recorder.start(500);
 
   elapsedSeconds = 0;
   timer.textContent = formatTime(0);
@@ -307,6 +308,23 @@ function deleteRecording(i) {
   renderRecordings();
 }
 
+// ── Quality presets ────────────────────────────────────────────────────────
+
+const PRESETS = {
+  wifi:     { resolution: '1280x720',  fps: '24' },
+  standard: { resolution: '1920x1080', fps: '30' },
+  high:     { resolution: '3840x2160', fps: '60' },
+};
+
+async function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  resolutionSelect.value = p.resolution;
+  fpsSelect.value = p.fps;
+  presetBtns.forEach(b => b.classList.toggle('active', b.dataset.preset === name));
+  await restartStream();
+}
+
 // ── Preview modal ──────────────────────────────────────────────────────────
 
 function openPreview(rec) {
@@ -362,8 +380,16 @@ async function exitMonitorMode() {
 
 cameraSelect.addEventListener('change', () => startStream(cameraSelect.value));
 
-resolutionSelect.addEventListener('change', restartStream);
-fpsSelect.addEventListener('change', restartStream);
+presetBtns.forEach(btn => btn.addEventListener('click', () => applyPreset(btn.dataset.preset)));
+
+resolutionSelect.addEventListener('change', () => {
+  presetBtns.forEach(b => b.classList.remove('active'));
+  restartStream();
+});
+fpsSelect.addEventListener('change', () => {
+  presetBtns.forEach(b => b.classList.remove('active'));
+  restartStream();
+});
 
 [orientLandscape, orientPortrait].forEach(btn => {
   btn.addEventListener('click', async () => {

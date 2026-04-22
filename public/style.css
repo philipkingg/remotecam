@@ -491,13 +491,15 @@ input[type="range"]::-webkit-slider-thumb:hover {
   max-width: 480px;
 }
 
-/* ── Orientation buttons ─────────────────────────────────────────────────────── */
+/* ── Preset / orientation buttons ───────────────────────────────────────────── */
 
+.preset-btns,
 .orient-btns {
   display: flex;
   gap: 6px;
 }
 
+.preset-btn,
 .orient-btn {
   font-family: inherit;
   font-size: 13px;
@@ -512,15 +514,23 @@ input[type="range"]::-webkit-slider-thumb:hover {
   outline: none;
 }
 
+.preset-btn.active,
 .orient-btn.active {
   background: var(--surface);
   border-color: #444;
   color: var(--text);
 }
 
+.preset-btn:hover:not(.active),
 .orient-btn:hover:not(.active) {
   border-color: #333;
   color: #aaa;
+}
+
+.preset-btn[data-preset="wifi"].active {
+  border-color: #2b6cb0;
+  color: #90cdf4;
+  background: #1a2a3a;
 }
 
 /* ── Monitor mode layout ────────────────────────────────────────────────────── */
