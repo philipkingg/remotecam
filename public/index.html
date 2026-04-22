@@ -9,6 +9,7 @@
 <body>
   <header>
     <div class="logo">remote<span>cam</span></div>
+    <button id="monitorBtn" class="monitor-btn" disabled>Monitor</button>
     <div class="status-pill" id="statusPill">
       <span class="dot"></span>
       <span class="status-text">No camera</span>
@@ -25,6 +26,13 @@
       <p>Select your iPhone from the camera list below</p>
     </div>
     <div class="timer" id="timer">00:00</div>
+    <div class="monitor-overlay hidden" id="monitorOverlay">
+      <div class="monitor-bar">
+        <span class="monitor-hint">Record on iPhone &middot; retrieve via AirDrop</span>
+        <button id="fullscreenBtn">Fullscreen</button>
+        <button id="exitMonitorBtn">Exit</button>
+      </div>
+    </div>
   </div>
 
   <div class="controls">

@@ -441,3 +441,122 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .recordings.hidden {
   display: none;
 }
+
+/* ── Monitor button ────────────────────────────────────────────────────────── */
+
+.monitor-btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  outline: none;
+  letter-spacing: 0.02em;
+}
+
+.monitor-btn:hover:not(:disabled) {
+  border-color: #444;
+  color: var(--text);
+}
+
+.monitor-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.monitor-btn.active {
+  background: var(--text);
+  border-color: var(--text);
+  color: #0a0a0a;
+}
+
+/* ── Monitor mode layout ────────────────────────────────────────────────────── */
+
+body.monitor {
+  padding: 0;
+  background: #000;
+  overflow: hidden;
+}
+
+body.monitor header,
+body.monitor .controls,
+body.monitor .cam-controls,
+body.monitor .recordings {
+  display: none;
+}
+
+body.monitor .preview-wrap {
+  max-width: 100vw;
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  border: none;
+  aspect-ratio: unset;
+}
+
+/* ── Monitor overlay ─────────────────────────────────────────────────────── */
+
+.monitor-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 40px;
+  opacity: 1;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+
+.monitor-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.monitor-overlay:not(.hidden) {
+  pointer-events: auto;
+}
+
+.monitor-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50px;
+  padding: 10px 20px;
+}
+
+.monitor-hint {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  padding-right: 4px;
+}
+
+.monitor-bar button {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+  outline: none;
+  white-space: nowrap;
+}
+
+.monitor-bar button:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.25);
+}

@@ -14,6 +14,10 @@ const zoomWrap = document.getElementById('zoomWrap');
 const zoomRange = document.getElementById('zoomRange');
 const zoomVal = document.getElementById('zoomVal');
 const audioToggle = document.getElementById('audioToggle');
+const monitorBtn = document.getElementById('monitorBtn');
+const monitorOverlay = document.getElementById('monitorOverlay');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+const exitMonitorBtn = document.getElementById('exitMonitorBtn');
 
 let stream = null;
 let recorder = null;
@@ -23,6 +27,8 @@ let timerInterval = null;
 let elapsedSeconds = 0;
 let recordings = [];
 let audioEnabled = false;
+let monitorMode = false;
+let overlayHideTimer = null;
 
 // ── Device list ────────────────────────────────────────────────────────────
 
@@ -72,6 +78,7 @@ async function startStream(deviceId) {
     camControls.classList.add('hidden');
     setStatus('idle');
     recordBtn.disabled = true;
+    monitorBtn.disabled = true;
     return;
   }
 
@@ -86,11 +93,13 @@ async function startStream(deviceId) {
     camControls.classList.remove('hidden');
     setStatus('live');
     recordBtn.disabled = false;
+    monitorBtn.disabled = false;
     updateZoomCapabilities();
   } catch (err) {
     console.error('Camera error:', err);
     setStatus('idle');
     recordBtn.disabled = true;
+    monitorBtn.disabled = true;
     camControls.classList.add('hidden');
   }
 }
@@ -168,8 +177,11 @@ function startRecording() {
     'video/webm',
   ].find(t => MediaRecorder.isTypeSupported(t)) ?? '';
 
+  const bitrateMap = { '3840x2160': 50_000_000, '1920x1080': 20_000_000, '1280x720': 10_000_000 };
+  const videoBitsPerSecond = bitrateMap[resolutionSelect.value] ?? 20_000_000;
+
   recordingMimeType = mimeType;
-  recorder = new MediaRecorder(stream, { mimeType });
+  recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond });
   recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
   recorder.onstop = saveRecording;
   recorder.start(1000);
@@ -249,6 +261,33 @@ function deleteRecording(i) {
   renderRecordings();
 }
 
+// ── Monitor mode ───────────────────────────────────────────────────────────
+
+function showOverlay() {
+  monitorOverlay.classList.remove('hidden');
+  clearTimeout(overlayHideTimer);
+  overlayHideTimer = setTimeout(() => monitorOverlay.classList.add('hidden'), 3000);
+}
+
+function enterMonitorMode() {
+  monitorMode = true;
+  document.body.classList.add('monitor');
+  monitorBtn.classList.add('active');
+  showOverlay();
+  document.addEventListener('mousemove', showOverlay);
+}
+
+function exitMonitorMode() {
+  monitorMode = false;
+  document.body.classList.remove('monitor');
+  monitorBtn.classList.remove('active');
+  monitorOverlay.classList.add('hidden');
+  clearTimeout(overlayHideTimer);
+  document.removeEventListener('mousemove', showOverlay);
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  fullscreenBtn.textContent = 'Fullscreen';
+}
+
 // ── Event listeners ────────────────────────────────────────────────────────
 
 cameraSelect.addEventListener('change', () => startStream(cameraSelect.value));
@@ -323,6 +362,32 @@ document.getElementById('clearAllBtn').addEventListener('click', () => {
   recordings.forEach(r => URL.revokeObjectURL(r.url));
   recordings = [];
   renderRecordings();
+});
+
+monitorBtn.addEventListener('click', enterMonitorMode);
+exitMonitorBtn.addEventListener('click', exitMonitorMode);
+
+monitorOverlay.addEventListener('mouseenter', () => clearTimeout(overlayHideTimer));
+monitorOverlay.addEventListener('mouseleave', () => {
+  overlayHideTimer = setTimeout(() => monitorOverlay.classList.add('hidden'), 3000);
+});
+
+fullscreenBtn.addEventListener('click', () => {
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
+    fullscreenBtn.textContent = 'Fullscreen';
+  } else {
+    document.documentElement.requestFullscreen().catch(() => {});
+    fullscreenBtn.textContent = 'Exit Fullscreen';
+  }
+});
+
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) fullscreenBtn.textContent = 'Fullscreen';
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && monitorMode) exitMonitorMode();
 });
 
 navigator.mediaDevices.addEventListener('devicechange', loadDevices);
