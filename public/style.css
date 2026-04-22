@@ -250,9 +250,9 @@ button {
   width: 100%;
   max-width: 960px;
   margin-top: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px 16px;
   padding: 14px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -263,16 +263,21 @@ button {
   display: none;
 }
 
-.cam-control.hidden {
-  display: none;
-}
-
 .cam-control {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 130px;
-  flex: 1;
+  min-width: 0;
+}
+
+.cam-control.hidden {
+  display: none;
+}
+
+/* Wide controls that benefit from more horizontal space */
+#zoomWrap,
+#micWrap {
+  grid-column: span 2;
 }
 
 .cam-control label {
