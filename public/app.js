@@ -14,6 +14,8 @@ const zoomWrap = document.getElementById('zoomWrap');
 const zoomRange = document.getElementById('zoomRange');
 const zoomVal = document.getElementById('zoomVal');
 const audioToggle = document.getElementById('audioToggle');
+const orientLandscape = document.getElementById('orientLandscape');
+const orientPortrait = document.getElementById('orientPortrait');
 const monitorBtn = document.getElementById('monitorBtn');
 const monitorOverlay = document.getElementById('monitorOverlay');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
@@ -27,6 +29,7 @@ let timerInterval = null;
 let elapsedSeconds = 0;
 let recordings = [];
 let audioEnabled = false;
+let orientation = 'landscape'; // 'landscape' | 'portrait'
 let monitorMode = false;
 let overlayHideTimer = null;
 
@@ -59,7 +62,8 @@ async function loadDevices() {
 // ── Stream ─────────────────────────────────────────────────────────────────
 
 function buildVideoConstraints(deviceId) {
-  const [width, height] = resolutionSelect.value.split('x').map(Number);
+  const [w, h] = resolutionSelect.value.split('x').map(Number);
+  const [width, height] = orientation === 'portrait' ? [h, w] : [w, h];
   const frameRate = Number(fpsSelect.value);
   return {
     deviceId: { exact: deviceId },
@@ -91,6 +95,7 @@ async function startStream(deviceId) {
     videoEl.classList.add('active');
     emptyState.style.display = 'none';
     camControls.classList.remove('hidden');
+    setPreviewOrientation();
     setStatus('live');
     recordBtn.disabled = false;
     monitorBtn.disabled = false;
@@ -107,6 +112,11 @@ async function startStream(deviceId) {
 async function restartStream() {
   const deviceId = cameraSelect.value;
   if (deviceId) await startStream(deviceId);
+}
+
+function setPreviewOrientation() {
+  const previewWrap = document.querySelector('.preview-wrap');
+  previewWrap.classList.toggle('portrait', orientation === 'portrait');
 }
 
 // ── Zoom ───────────────────────────────────────────────────────────────────
@@ -270,6 +280,13 @@ function showOverlay() {
 }
 
 function enterMonitorMode() {
+  // Release the stream so the iPhone camera is free for native recording
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    videoEl.srcObject = null;
+    videoEl.classList.remove('active');
+  }
   monitorMode = true;
   document.body.classList.add('monitor');
   monitorBtn.classList.add('active');
@@ -277,7 +294,7 @@ function enterMonitorMode() {
   document.addEventListener('mousemove', showOverlay);
 }
 
-function exitMonitorMode() {
+async function exitMonitorMode() {
   monitorMode = false;
   document.body.classList.remove('monitor');
   monitorBtn.classList.remove('active');
@@ -286,6 +303,8 @@ function exitMonitorMode() {
   document.removeEventListener('mousemove', showOverlay);
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   fullscreenBtn.textContent = 'Fullscreen';
+  // Reacquire the stream
+  await restartStream();
 }
 
 // ── Event listeners ────────────────────────────────────────────────────────
@@ -294,6 +313,16 @@ cameraSelect.addEventListener('change', () => startStream(cameraSelect.value));
 
 resolutionSelect.addEventListener('change', restartStream);
 fpsSelect.addEventListener('change', restartStream);
+
+[orientLandscape, orientPortrait].forEach(btn => {
+  btn.addEventListener('click', async () => {
+    orientation = btn.dataset.orient;
+    orientLandscape.classList.toggle('active', orientation === 'landscape');
+    orientPortrait.classList.toggle('active', orientation === 'portrait');
+    setPreviewOrientation();
+    await restartStream();
+  });
+});
 
 zoomRange.addEventListener('input', () => {
   const v = Number(zoomRange.value);

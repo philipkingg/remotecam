@@ -27,10 +27,13 @@
     </div>
     <div class="timer" id="timer">00:00</div>
     <div class="monitor-overlay hidden" id="monitorOverlay">
+      <div class="monitor-released">
+        <p>iPhone camera released</p>
+        <p class="monitor-sub">Open Camera app on iPhone to record &rarr; retrieve via AirDrop</p>
+      </div>
       <div class="monitor-bar">
-        <span class="monitor-hint">Record on iPhone &middot; retrieve via AirDrop</span>
         <button id="fullscreenBtn">Fullscreen</button>
-        <button id="exitMonitorBtn">Exit</button>
+        <button id="exitMonitorBtn">Exit Monitor</button>
       </div>
     </div>
   </div>
@@ -70,6 +73,14 @@
     <div class="cam-control" id="zoomWrap" style="display:none">
       <label for="zoomRange">Zoom <span id="zoomVal">1×</span></label>
       <input type="range" id="zoomRange" min="1" max="5" step="0.1" value="1" />
+    </div>
+
+    <div class="cam-control">
+      <label>Orientation</label>
+      <div class="orient-btns">
+        <button class="orient-btn active" id="orientLandscape" data-orient="landscape">Landscape</button>
+        <button class="orient-btn" id="orientPortrait" data-orient="portrait">Portrait</button>
+      </div>
     </div>
 
     <div class="cam-control">
