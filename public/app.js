@@ -295,8 +295,8 @@ function renderRecordings() {
       </div>
       <div class="actions">
         <button data-action="preview" data-i="${i}">Preview</button>
-        <button data-action="download" data-i="${i}">Download</button>
-        ${!rec.ismp4 ? `<button data-action="convert" data-i="${i}" class="convert">→ MOV</button>` : ''}
+        <button data-action="export" data-i="${i}" class="export-btn">Export MOV</button>
+        <button data-action="rawsave" data-i="${i}" class="raw-btn">Raw</button>
         <button data-action="delete" data-i="${i}" class="delete">Delete</button>
       </div>`;
     recordingsList.appendChild(item);
@@ -448,26 +448,25 @@ recordingsList.addEventListener('click', async e => {
 
   if (btn.dataset.action === 'preview') {
     openPreview(rec);
-  } else if (btn.dataset.action === 'download') {
-    const a = document.createElement('a');
-    a.href = rec.url;
-    a.download = rec.filename;
-    a.click();
-  } else if (btn.dataset.action === 'convert') {
-    btn.textContent = 'Converting…';
+  } else if (btn.dataset.action === 'export') {
+    btn.textContent = 'Exporting…';
     btn.disabled = true;
     try {
-      const res = await fetch('/convert', { method: 'POST', body: rec.blob, headers: { 'Content-Type': 'video/webm' } });
-      if (!res.ok) {
-        const { error } = await res.json();
-        alert(`Conversion failed: ${error}`);
-        btn.textContent = '→ MP4';
+      const response = await fetch('/export', {
+        method: 'POST',
+        body: rec.blob,
+        headers: { 'Content-Type': rec.blob.type || 'video/mp4' },
+      });
+      if (!response.ok) {
+        const { error } = await response.json();
+        alert(`Export failed: ${error}`);
+        btn.textContent = 'Export MOV';
         btn.disabled = false;
         return;
       }
-      const movBlob = await res.blob();
+      const movBlob = await response.blob();
       const movUrl = URL.createObjectURL(movBlob);
-      const movName = rec.filename.replace('.webm', '.mov');
+      const movName = rec.filename.replace(/\.\w+$/, '.mov');
       const a = document.createElement('a');
       a.href = movUrl;
       a.download = movName;
@@ -475,9 +474,14 @@ recordingsList.addEventListener('click', async e => {
       URL.revokeObjectURL(movUrl);
       btn.textContent = '✓ Done';
     } catch {
-      btn.textContent = '→ MP4';
+      btn.textContent = 'Export MOV';
       btn.disabled = false;
     }
+  } else if (btn.dataset.action === 'rawsave') {
+    const a = document.createElement('a');
+    a.href = rec.url;
+    a.download = rec.filename;
+    a.click();
   } else if (btn.dataset.action === 'delete') {
     deleteRecording(i);
   }
