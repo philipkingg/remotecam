@@ -24,6 +24,7 @@ const presetBtns = document.querySelectorAll('.preset-btn');
 const ratioBtns = document.querySelectorAll('[data-ratio]');
 const orientLandscape = document.getElementById('orientLandscape');
 const orientPortrait = document.getElementById('orientPortrait');
+const discardBtn = document.getElementById('discardBtn');
 const monitorBtn = document.getElementById('monitorBtn');
 const monitorOverlay = document.getElementById('monitorOverlay');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
@@ -249,10 +250,31 @@ function startRecording() {
   setStatus('recording');
   recordBtn.textContent = 'Stop';
   recordBtn.classList.add('recording');
+  discardBtn.classList.remove('hidden');
   cameraSelect.disabled = true;
   resolutionSelect.disabled = true;
   fpsSelect.disabled = true;
   audioToggle.disabled = true;
+}
+
+function discardRecording() {
+  if (recorder) {
+    recorder.ondataavailable = null;
+    recorder.onstop = null;
+    if (recorder.state !== 'inactive') recorder.stop();
+    recorder = null;
+  }
+  chunks = [];
+  clearInterval(timerInterval);
+  timer.classList.remove('visible');
+  setStatus('live');
+  recordBtn.textContent = 'Record';
+  recordBtn.classList.remove('recording');
+  discardBtn.classList.add('hidden');
+  cameraSelect.disabled = false;
+  resolutionSelect.disabled = false;
+  fpsSelect.disabled = false;
+  audioToggle.disabled = false;
 }
 
 function stopRecording() {
@@ -262,6 +284,7 @@ function stopRecording() {
   setStatus('live');
   recordBtn.textContent = 'Record';
   recordBtn.classList.remove('recording');
+  discardBtn.classList.add('hidden');
   cameraSelect.disabled = false;
   resolutionSelect.disabled = false;
   fpsSelect.disabled = false;
@@ -289,15 +312,21 @@ function renderRecordings() {
     const item = document.createElement('div');
     item.className = 'recording-item';
     item.innerHTML = `
-      <div>
+      <div class="item-info">
         <div class="name">${rec.filename}</div>
         <div class="meta">${formatTime(rec.duration)} · ${rec.ismp4 ? 'MOV' : 'WebM'}</div>
       </div>
-      <div class="actions">
-        <button data-action="preview" data-i="${i}">Preview</button>
-        <button data-action="export" data-i="${i}" class="export-btn">Export MOV</button>
-        <button data-action="rawsave" data-i="${i}" class="raw-btn">Raw</button>
-        <button data-action="delete" data-i="${i}" class="delete">Delete</button>
+      <div class="item-end">
+        <div class="export-progress-wrap hidden">
+          <div class="export-progress-track"><div class="export-progress-bar"></div></div>
+          <span class="export-progress-text">0%</span>
+        </div>
+        <div class="actions">
+          <button data-action="preview" data-i="${i}">Preview</button>
+          <button data-action="export" data-i="${i}" class="export-btn">Export MOV</button>
+          <button data-action="rawsave" data-i="${i}" class="raw-btn">Raw</button>
+          <button data-action="delete" data-i="${i}" class="delete">Delete</button>
+        </div>
       </div>`;
     recordingsList.appendChild(item);
   });
@@ -440,6 +469,8 @@ recordBtn.addEventListener('click', () => {
   else startRecording();
 });
 
+discardBtn.addEventListener('click', discardRecording);
+
 recordingsList.addEventListener('click', async e => {
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
@@ -449,33 +480,63 @@ recordingsList.addEventListener('click', async e => {
   if (btn.dataset.action === 'preview') {
     openPreview(rec);
   } else if (btn.dataset.action === 'export') {
-    btn.textContent = 'Exporting…';
+    const item = btn.closest('.recording-item');
+    const progressWrap = item.querySelector('.export-progress-wrap');
+    const progressBar = item.querySelector('.export-progress-bar');
+    const progressText = item.querySelector('.export-progress-text');
+    const actionsDiv = item.querySelector('.actions');
+
     btn.disabled = true;
+    actionsDiv.style.display = 'none';
+    progressWrap.classList.remove('hidden');
+    progressBar.style.width = '0%';
+    progressText.textContent = '0%';
+
+    const reset = () => {
+      progressWrap.classList.add('hidden');
+      actionsDiv.style.display = '';
+      btn.disabled = false;
+    };
+
     try {
-      const response = await fetch('/export', {
+      const startRes = await fetch('/export', {
         method: 'POST',
         body: rec.blob,
         headers: { 'Content-Type': rec.blob.type || 'video/mp4' },
       });
-      if (!response.ok) {
-        const { error } = await response.json();
+      if (!startRes.ok) {
+        const { error } = await startRes.json();
         alert(`Export failed: ${error}`);
-        btn.textContent = 'Export MOV';
-        btn.disabled = false;
-        return;
+        return reset();
       }
-      const movBlob = await response.blob();
+      const { jobId } = await startRes.json();
+
+      await new Promise((resolve, reject) => {
+        const es = new EventSource(`/export/progress/${jobId}`);
+        es.onmessage = e => {
+          const d = JSON.parse(e.data);
+          if (d.error) { es.close(); return reject(new Error(d.error)); }
+          progressBar.style.width = `${d.progress}%`;
+          progressText.textContent = `${d.progress}%`;
+          if (d.done) { es.close(); resolve(); }
+        };
+        es.onerror = () => { es.close(); reject(new Error('Connection lost')); };
+      });
+
+      const fileRes = await fetch(`/export/file/${jobId}`);
+      const movBlob = await fileRes.blob();
       const movUrl = URL.createObjectURL(movBlob);
-      const movName = rec.filename.replace(/\.\w+$/, '.mov');
       const a = document.createElement('a');
       a.href = movUrl;
-      a.download = movName;
+      a.download = rec.filename.replace(/\.\w+$/, '.mov');
       a.click();
       URL.revokeObjectURL(movUrl);
-      btn.textContent = '✓ Done';
-    } catch {
-      btn.textContent = 'Export MOV';
-      btn.disabled = false;
+
+      progressText.textContent = '✓ Done';
+      setTimeout(() => { reset(); btn.textContent = '✓ Done'; }, 1500);
+    } catch (err) {
+      alert(`Export failed: ${err.message}`);
+      reset();
     }
   } else if (btn.dataset.action === 'rawsave') {
     const a = document.createElement('a');

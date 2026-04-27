@@ -222,6 +222,21 @@ button {
   outline: none;
 }
 
+.discard-recording-btn {
+  background: transparent;
+  border: 1px solid var(--red-dark);
+  color: #fc8181;
+  min-width: 80px;
+}
+
+.discard-recording-btn:hover {
+  background: rgba(197, 48, 48, 0.15);
+}
+
+.discard-recording-btn.hidden {
+  display: none;
+}
+
 #recordBtn {
   background: var(--text);
   color: #0a0a0a;
@@ -398,20 +413,63 @@ input[type="range"]::-webkit-slider-thumb:hover {
   gap: 12px;
 }
 
-.recording-item .name {
+.item-info .name {
   font-size: 13px;
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
-.recording-item .meta {
+.item-info .meta {
   font-size: 12px;
   color: var(--muted);
+}
+
+.item-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .recording-item .actions {
   display: flex;
   gap: 8px;
+}
+
+/* Export progress bar */
+.export-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 220px;
+}
+
+.export-progress-wrap.hidden {
+  display: none;
+}
+
+.export-progress-track {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.export-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #90cdf4;
+  border-radius: 2px;
+  transition: width 0.25s ease;
+}
+
+.export-progress-text {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  min-width: 36px;
+  text-align: right;
 }
 
 .recording-item button {
