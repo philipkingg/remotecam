@@ -34,10 +34,13 @@ app.post('/export', (req, res) => {
   const outFile = `${tmp}.mov`;
 
   jobs.set(jobId, { progress: 0, done: false, error: null, outFile, inFile });
-  res.json({ jobId });
 
   const ws = fs.createWriteStream(inFile);
-  req.pipe(ws).on('finish', () => runExport(ffmpeg, jobId, inFile, outFile));
+  ws.on('error', err => res.status(500).json({ error: err.message }));
+  req.pipe(ws).on('finish', () => {
+    res.json({ jobId });
+    runExport(ffmpeg, jobId, inFile, outFile);
+  });
 });
 
 function runExport(ffmpeg, jobId, inFile, outFile) {
