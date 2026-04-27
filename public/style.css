@@ -499,6 +499,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
   max-width: 480px;
 }
 
+.preview-wrap.portrait video {
+  object-fit: cover;
+}
+
 /* ── Preset / orientation buttons ───────────────────────────────────────────── */
 
 .preset-btns,
